@@ -13,7 +13,7 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
       POSTGRES_PASSWORD_FILE: /run/secrets/postgresql_password
     volumes:
-      - postgres-data:/var/lib/postgresql/data/pgdata
+      - ./postgres-data:/var/lib/postgresql/data/pgdata
     secrets:
       - postgresql_password
 
@@ -25,7 +25,7 @@ services:
       - "90:8069"
       - "8072:8072" #live chat
     volumes:
-      - odoo-web-data:/var/lib/odoo
+      - ./odoo-web-data:/var/lib/odoo
       - ./config:/etc/odoo
       - ./addons:/mnt/extra-addons
     environment:
@@ -39,13 +39,13 @@ services:
       - postgresql_password
     #entrypoint: "/usr/bin/odoo -c /etc/odoo/odoo.conf --dev all"
 
-volumes:
-  postgres-data:
-  odoo-web-data:
-  odoo-17_db-data:
-    external: true
-  odoo-17_odoo-web-data:
-    external: true
+# volumes:
+#   postgres-data:
+#   odoo-web-data:
+#   odoo-17_db-data:
+#     external: true
+#   odoo-17_odoo-web-data:
+#     external: true
 
 secrets:
   postgresql_password:
