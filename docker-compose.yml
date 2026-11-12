@@ -2,51 +2,65 @@ version: '3.1'
 services:
 
   db:
-    image: postgres:16.0
-    restart: always
+    image: postgres:18-alpine
+    restart: unless-stopped
+
+    env_file:
+      - .env
+      - .env.dev
+
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${POSTGRES_FORWARDED_PORT}:5432"
+
     environment:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: odoo
-      #POSTGRES_PASSWORD: odoo
-      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD_FILE: /run/secrets/postgresql_password
+
     volumes:
-      - ./postgres-data:/var/lib/postgresql/data/pgdata
+      - ./postgres-data:/var/lib/postgresql
+
     secrets:
       - postgresql_password
 
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
   web:
-    image: odoo:17.0
+    image: odoo:19.0
+    restart: unless-stopped
+
+    env_file:
+      - .env
+      - .env.dev
+
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+
     ports:
-      - "90:8069"
-      - "8072:8072" #live chat
+      - "${ODOO_FORWARDED_PORT}:8069"
+      - "${ODOO_LIVE_CHAT_FORWARDED_PORT:-8072}:8072"
+
+    environment:
+      HOST: ${ODOO_DB_HOST}
+      PORT: ${ODOO_DB_PORT}
+      USER: ${POSTGRES_USER}
+      PASSWORD: ${ODOO_DB_PASSWORD}
+
     volumes:
       - ./odoo-web-data:/var/lib/odoo
       - ./config:/etc/odoo
       - ./addons:/mnt/extra-addons
-    environment:
-      POSTGRES_HOST: db
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: postgres
-      POSTGRES_USER: odoo
-      #POSTGRES_PASSWORD: odoo
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgresql_password
-    secrets:
-      - postgresql_password
-    #entrypoint: "/usr/bin/odoo -c /etc/odoo/odoo.conf --dev all"
 
-# volumes:
-#   postgres-data:
-#   odoo-web-data:
-#   odoo-17_db-data:
-#     external: true
-#   odoo-17_odoo-web-data:
-#     external: true
+    # Para desarrollo:
+    # command: ["--dev=all"]
+
 
 secrets:
   postgresql_password:
-    file: odoo_pg_pass
+    file: ./odoo_pg_pass
